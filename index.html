@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cold Chain Monitoring Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Exo+2:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+</head>
+<body>
+
+  <div class="bg-layer" aria-hidden="true"></div>
+  <div class="grid-overlay" aria-hidden="true"></div>
+
+  <div class="snowflakes" aria-hidden="true">
+    <div class="snowflake">❄</div><div class="snowflake">❅</div>
+    <div class="snowflake">❆</div><div class="snowflake">❄</div>
+    <div class="snowflake">❅</div><div class="snowflake">❆</div>
+    <div class="snowflake">❄</div><div class="snowflake">❅</div>
+    <div class="snowflake">•</div><div class="snowflake">•</div>
+    <div class="snowflake">•</div><div class="snowflake">❄</div>
+  </div>
+
+  <div class="container">
+    <header>
+      <div class="header-inner">
+        <div class="logo-area">
+          <div class="logo-icon">
+            <svg viewBox="0 0 40 40" fill="none">
+              <circle cx="20" cy="20" r="18" stroke="currentColor" stroke-width="1.5" opacity="0.4"/>
+              <path d="M20 6v28M6 20h28M9 9l22 22M31 9L9 31" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+              <circle cx="20" cy="20" r="4" fill="currentColor"/>
+            </svg>
+          </div>
+          <div>
+            <h1>COLD CHAIN<br><span>MONITOR</span></h1>
+            <p class="subtitle">IoT Smart Cold Storage · Real-Time Telemetry</p>
+          </div>
+        </div>
+        <div class="header-status">
+          <div id="connection-status" class="status-badge disconnected">
+            <span class="status-dot"></span>
+            <span class="status-text">Terputus</span>
+          </div>
+          <div class="live-clock" id="live-clock">--:--:--</div>
+        </div>
+      </div>
+    </header>
+
+    <div class="alert-banner" id="alert-banner">
+      <span class="alert-icon">⚠</span>
+      <span>PERINGATAN KRITIS — Kondisi rantai dingin tidak optimal! Periksa segera.</span>
+      <span class="alert-icon">⚠</span>
+    </div>
+
+    <div class="grid">
+
+      <!-- ── Kartu Suhu + Kontrol ── -->
+      <div class="card temp-card" id="temp-card">
+        <div class="card-glow"></div>
+        <div class="card-header">
+          <div class="card-icon-wrap temp-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" class="icon">
+              <path d="M12 2a2 2 0 0 1 2 2v8.17A4 4 0 1 1 8 16V4a2 2 0 0 1 4-4z" stroke-width="1.5"/>
+            </svg>
+          </div>
+          <span class="card-label">Suhu Aktual</span>
+          <div class="card-badge" id="temp-state-badge">NORMAL</div>
+        </div>
+
+        <div class="value-row">
+          <div class="card-value mono" id="temp-value">--</div>
+          <div class="card-unit">°C</div>
+        </div>
+
+        <div class="gauge-wrap">
+          <svg class="gauge-svg" viewBox="0 0 120 70">
+            <path d="M10 65 A 55 55 0 0 1 110 65" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="8" stroke-linecap="round"/>
+            <path class="gauge-arc" id="temp-gauge-arc" d="M10 65 A 55 55 0 0 1 110 65" fill="none" stroke="url(#tempGrad)" stroke-width="8" stroke-linecap="round" stroke-dasharray="172" stroke-dashoffset="172"/>
+            <defs>
+              <linearGradient id="tempGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#38bdf8"/>
+                <stop offset="60%" stop-color="#22d3ee"/>
+                <stop offset="100%" stop-color="#f87171"/>
+              </linearGradient>
+            </defs>
+          </svg>
+          <div class="gauge-label-min">-10°</div>
+          <div class="gauge-label-max">40°</div>
+        </div>
+
+        <div class="thermo-track">
+          <div class="thermo-fill" id="thermo-fill"></div>
+          <div class="thermo-labels">
+            <span>-10</span><span>0</span><span>10</span><span>20</span><span>30</span><span>40</span>
+          </div>
+        </div>
+
+
+      </div>
+
+      <!-- ── Kartu Kelembaban + Kontrol ── -->
+      <div class="card humidity-card">
+        <div class="card-glow"></div>
+        <div class="card-header">
+          <div class="card-icon-wrap hum-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" class="icon">
+              <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" stroke-width="1.5"/>
+            </svg>
+          </div>
+          <span class="card-label">Kelembaban</span>
+        </div>
+
+        <div class="value-row">
+          <div class="card-value mono" id="hum-value">--</div>
+          <div class="card-unit">% RH</div>
+        </div>
+
+        <div class="humidity-visual">
+          <div class="droplet-container">
+            <div class="droplet d1"></div><div class="droplet d2"></div>
+            <div class="droplet d3"></div><div class="droplet d4"></div>
+            <div class="droplet d5"></div>
+          </div>
+          <div class="hum-bar-bg">
+            <div class="hum-bar-fill" id="hum-bar"></div>
+          </div>
+        </div>
+
+
+      </div>
+
+      <!-- ── Kartu Daya ── -->
+      <div class="card power-card">
+        <div class="card-glow"></div>
+        <div class="card-header">
+          <div class="card-icon-wrap power-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" class="icon">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" stroke-width="1.5"/>
+            </svg>
+          </div>
+          <span class="card-label">Konsumsi Daya</span>
+        </div>
+        <div class="value-row">
+          <div class="card-value mono" id="power-value">--</div>
+          <div class="card-unit">W</div>
+        </div>
+        <div class="power-bar-bg">
+          <div class="power-bar-fill" id="power-bar"></div>
+          <div class="power-ticks">
+            <span>0</span><span>125</span><span>250</span><span>375</span><span>500W</span>
+          </div>
+        </div>
+        <div class="waveform" id="waveform">
+          <svg viewBox="0 0 200 40" preserveAspectRatio="none">
+            <polyline id="wave-line" points="0,20 20,20 40,20 60,20 80,20 100,20 120,20 140,20 160,20 180,20 200,20"
+              fill="none" stroke="rgba(251,191,36,0.4)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+      </div>
+
+      <!-- ── Kartu Listrik ── -->
+      <div class="card elec-card">
+        <div class="card-header">
+          <div class="card-icon-wrap elec-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" class="icon">
+              <circle cx="12" cy="12" r="10" stroke-width="1.5"/>
+              <path d="M8 12h8M12 8v8" stroke-width="1.5"/>
+            </svg>
+          </div>
+          <span class="card-label">Listrik</span>
+        </div>
+        <div class="elec-grid">
+          <div class="elec-item">
+            <div class="elec-label">⚡ Tegangan</div>
+            <div class="elec-value mono" id="volt-value">-- V</div>
+            <div class="elec-bar-bg"><div class="elec-bar-fill volt-fill" id="volt-bar"></div></div>
+          </div>
+          <div class="elec-divider"></div>
+          <div class="elec-item">
+            <div class="elec-label">🔌 Arus</div>
+            <div class="elec-value mono" id="curr-value">-- A</div>
+            <div class="elec-bar-bg"><div class="elec-bar-fill curr-fill" id="curr-bar"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Kartu Relay ── -->
+      <div class="card relay-card">
+        <div class="card-header">
+          <div class="card-icon-wrap relay-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" class="icon">
+              <circle cx="12" cy="12" r="3" stroke-width="1.5"/>
+              <path d="M12 2v4M12 18v4M2 12h4M18 12h4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" stroke-width="1.5"/>
+            </svg>
+          </div>
+          <span class="card-label">Kompresor</span>
+        </div>
+        <div class="relay-body">
+          <div class="relay-toggle-visual">
+            <div class="relay-track" id="relay-track">
+              <div class="relay-thumb" id="relay-thumb"></div>
+            </div>
+          </div>
+          <div class="relay-status" id="relay-status">OFF</div>
+        </div>
+        <div class="fan-container">
+          <svg class="fan" viewBox="0 0 60 60" fill="none">
+            <circle cx="30" cy="30" r="6" fill="currentColor" opacity="0.8"/>
+            <path d="M30 24 Q20 10 10 16 Q16 26 30 24Z" fill="currentColor" opacity="0.5"/>
+            <path d="M36 30 Q50 20 44 10 Q34 16 36 30Z" fill="currentColor" opacity="0.5"/>
+            <path d="M30 36 Q40 50 50 44 Q44 34 30 36Z" fill="currentColor" opacity="0.5"/>
+            <path d="M24 30 Q10 40 16 50 Q26 44 24 30Z" fill="currentColor" opacity="0.5"/>
+          </svg>
+          <div class="fan-label">Kipas Kompresor</div>
+        </div>
+      </div>
+
+    </div><!-- /.grid -->
+
+    <!-- ═══ WAREHOUSE ═══ -->
+    <section class="warehouse-section">
+      <div class="section-header">
+        <h2>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" width="22" height="22">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" stroke-width="1.5"/>
+            <polyline points="9,22 9,12 15,12 15,22" stroke-width="1.5"/>
+          </svg>
+          Visualisasi Gudang Pendingin
+        </h2>
+        <span class="section-badge" id="warehouse-status-badge">OPERASIONAL</span>
+      </div>
+
+      <div class="warehouse-container">
+        <div class="forklift-wrap" id="forklift-wrap">
+          <svg class="forklift-svg" viewBox="0 0 80 60" fill="none">
+            <rect x="10" y="30" width="45" height="20" rx="3" fill="currentColor" opacity="0.7"/>
+            <rect x="35" y="18" width="20" height="15" rx="2" fill="currentColor" opacity="0.9"/>
+            <rect x="38" y="20" width="14" height="9" rx="1" fill="#a5f3fc" opacity="0.5"/>
+            <rect x="5" y="5" width="5" height="40" rx="1" fill="currentColor" opacity="0.8"/>
+            <rect x="2" y="38" width="12" height="3" rx="1" fill="currentColor"/>
+            <rect x="2" y="44" width="12" height="3" rx="1" fill="currentColor"/>
+            <rect x="1" y="26" width="15" height="12" rx="2" fill="#38bdf8" opacity="0.8" class="forklift-box"/>
+            <circle cx="20" cy="52" r="5" fill="currentColor" opacity="0.9"/>
+            <circle cx="45" cy="52" r="5" fill="currentColor" opacity="0.9"/>
+            <circle cx="20" cy="52" r="2.5" fill="#0c4a6e"/>
+            <circle cx="45" cy="52" r="2.5" fill="#0c4a6e"/>
+          </svg>
+        </div>
+
+        <svg viewBox="0 0 760 240" class="warehouse-svg" id="warehouse-svg">
+          <defs>
+            <linearGradient id="wallGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="rgba(10,30,60,0.0)"/>
+              <stop offset="100%" stop-color="rgba(10,30,60,0.55)"/>
+            </linearGradient>
+            <linearGradient id="floorGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="rgba(30,58,100,0.6)"/>
+              <stop offset="100%" stop-color="rgba(10,25,50,0.9)"/>
+            </linearGradient>
+          </defs>
+          <rect x="0" y="205" width="760" height="35" fill="url(#floorGrad)"/>
+          <line x1="0" y1="205" x2="760" y2="205" stroke="rgba(99,179,237,0.25)" stroke-width="1"/>
+          <rect x="0" y="0" width="760" height="240" fill="url(#wallGrad)"/>
+
+          <!-- ZONA KIRI -->
+          <rect x="10" y="0" width="230" height="16" rx="3" fill="rgba(56,189,248,0.08)"/>
+          <rect x="30" y="18" width="5" height="187" rx="2" fill="#2d4a6e"/>
+          <rect x="215" y="18" width="5" height="187" rx="2" fill="#2d4a6e"/>
+          <rect x="28" y="18" width="194" height="5" rx="2" fill="#4a7ab5"/>
+          <rect x="30" y="65" width="190" height="6" rx="2" fill="#3a5f8e"/>
+          <rect x="30" y="130" width="190" height="6" rx="2" fill="#3a5f8e"/>
+          <rect x="30" y="186" width="190" height="6" rx="2" fill="#3a5f8e"/>
+          <!-- items -->
+          <rect x="38" y="24" width="52" height="41" rx="4" fill="#0e4272" opacity="0.9" class="item item1"/>
+          <rect x="38" y="24" width="52" height="6" rx="2" fill="#1a6fbb" opacity="0.7"/>
+          <text x="64" y="44" text-anchor="middle" dominant-baseline="central" font-size="18" font-family="Segoe UI Emoji,Apple Color Emoji,sans-serif">🥛</text>
+          <text x="64" y="62" text-anchor="middle" font-size="7.5" fill="#93c5fd" font-family="monospace">SUSU</text>
+          <rect x="97" y="24" width="52" height="41" rx="4" fill="#0e4272" opacity="0.9" class="item item2"/>
+          <rect x="97" y="24" width="52" height="6" rx="2" fill="#1a6fbb" opacity="0.7"/>
+          <text x="123" y="44" text-anchor="middle" dominant-baseline="central" font-size="18" font-family="Segoe UI Emoji,Apple Color Emoji,sans-serif">🧀</text>
+          <text x="123" y="62" text-anchor="middle" font-size="7.5" fill="#93c5fd" font-family="monospace">KEJU</text>
+          <rect x="156" y="24" width="52" height="41" rx="4" fill="#0e4272" opacity="0.9" class="item item3"/>
+          <rect x="156" y="24" width="52" height="6" rx="2" fill="#1a6fbb" opacity="0.7"/>
+          <text x="182" y="44" text-anchor="middle" dominant-baseline="central" font-size="18" font-family="Segoe UI Emoji,Apple Color Emoji,sans-serif">🍦</text>
+          <text x="182" y="62" text-anchor="middle" font-size="7.5" fill="#93c5fd" font-family="monospace">YOGURT</text>
+          <rect x="38" y="72" width="80" height="55" rx="4" fill="#082e52" opacity="0.95" class="item item4"/>
+          <rect x="38" y="72" width="80" height="7" rx="2" fill="#104068" opacity="0.8"/>
+          <text x="78" y="97" text-anchor="middle" dominant-baseline="central" font-size="24" font-family="Segoe UI Emoji,Apple Color Emoji,sans-serif">🥩</text>
+          <text x="78" y="123" text-anchor="middle" font-size="7.5" fill="#7dd3fc" font-family="monospace">DAGING  -2°C</text>
+          <rect x="125" y="72" width="78" height="55" rx="4" fill="#082e52" opacity="0.95" class="item item5"/>
+          <rect x="125" y="72" width="78" height="7" rx="2" fill="#104068" opacity="0.8"/>
+          <text x="164" y="97" text-anchor="middle" dominant-baseline="central" font-size="24" font-family="Segoe UI Emoji,Apple Color Emoji,sans-serif">🐟</text>
+          <text x="164" y="123" text-anchor="middle" font-size="7.5" fill="#7dd3fc" font-family="monospace">IKAN  0°C</text>
+          <rect x="38" y="137" width="52" height="48" rx="4" fill="#0a3550" opacity="0.9" class="item item6"/>
+          <text x="64" y="158" text-anchor="middle" dominant-baseline="central" font-size="20" font-family="Segoe UI Emoji,Apple Color Emoji,sans-serif">🍎</text>
+          <text x="64" y="180" text-anchor="middle" font-size="7.5" fill="#a5f3fc" font-family="monospace">BUAH</text>
+          <rect x="97" y="137" width="52" height="48" rx="4" fill="#0a3550" opacity="0.9" class="item item7"/>
+          <text x="123" y="158" text-anchor="middle" dominant-baseline="central" font-size="20" font-family="Segoe UI Emoji,Apple Color Emoji,sans-serif">🥦</text>
+          <text x="123" y="180" text-anchor="middle" font-size="7.5" fill="#a5f3fc" font-family="monospace">SAYUR</text>
+          <rect x="156" y="137" width="52" height="48" rx="4" fill="#0a3550" opacity="0.9" class="item item8"/>
+          <text x="182" y="158" text-anchor="middle" dominant-baseline="central" font-size="20" font-family="Segoe UI Emoji,Apple Color Emoji,sans-serif">🌿</text>
+          <text x="182" y="180" text-anchor="middle" font-size="7.5" fill="#a5f3fc" font-family="monospace">HERBAL</text>
+          <text x="122" y="218" text-anchor="middle" font-size="7.5" fill="rgba(165,243,252,0.55)" font-family="monospace">ZONA DINGIN (2–8°C)</text>
+
+          <!-- ZONA TENGAH -->
+          <rect x="255" y="0" width="240" height="16" rx="3" fill="rgba(34,211,238,0.08)"/>
+          <rect x="262" y="18" width="5" height="187" rx="2" fill="#2d4a6e"/>
+          <rect x="487" y="18" width="5" height="187" rx="2" fill="#2d4a6e"/>
+          <rect x="260" y="18" width="234" height="5" rx="2" fill="#4a7ab5"/>
+          <rect x="262" y="65" width="230" height="6" rx="2" fill="#3a5f8e"/>
+          <rect x="262" y="130" width="230" height="6" rx="2" fill="#3a5f8e"/>
+          <rect x="262" y="186" width="230" height="6" rx="2" fill="#3a5f8e"/>
+          <!-- items -->
+          <rect x="270" y="24" width="100" height="41" rx="4" fill="#073650" opacity="0.95" class="item item9"/>
+          <rect x="270" y="24" width="100" height="7" rx="2" fill="#0e5a7c" opacity="0.8"/>
+          <text x="320" y="44" text-anchor="middle" dominant-baseline="central" font-size="20" font-family="Segoe UI Emoji,Apple Color Emoji,sans-serif">🧊</text>
+          <text x="320" y="62" text-anchor="middle" font-size="7.5" fill="#bae6fd" font-family="monospace">PETI ES  -18°C</text>
+          <rect x="378" y="24" width="100" height="41" rx="4" fill="#073650" opacity="0.95" class="item item10"/>
+          <rect x="378" y="24" width="100" height="7" rx="2" fill="#0e5a7c" opacity="0.8"/>
+          <text x="428" y="44" text-anchor="middle" dominant-baseline="central" font-size="20" font-family="Segoe UI Emoji,Apple Color Emoji,sans-serif">🍦</text>
+          <text x="428" y="62" text-anchor="middle" font-size="7.5" fill="#bae6fd" font-family="monospace">FROZEN  -20°C</text>
+          <rect x="270" y="72" width="105" height="55" rx="4" fill="#042332" opacity="0.97" class="item item11"/>
+          <rect x="270" y="72" width="105" height="7" rx="2" fill="#073850" opacity="0.9"/>
+          <text x="322" y="97" text-anchor="middle" dominant-baseline="central" font-size="24" font-family="Segoe UI Emoji,Apple Color Emoji,sans-serif">💉</text>
+          <text x="322" y="121" text-anchor="middle" font-size="7.5" fill="#67e8f9" font-family="monospace">VAKSIN  2-8°C ✓</text>
+          <rect x="382" y="72" width="98" height="55" rx="4" fill="#042332" opacity="0.97" class="item item12"/>
+          <rect x="382" y="72" width="98" height="7" rx="2" fill="#073850" opacity="0.9"/>
+          <text x="431" y="97" text-anchor="middle" dominant-baseline="central" font-size="24" font-family="Segoe UI Emoji,Apple Color Emoji,sans-serif">💊</text>
+          <text x="431" y="121" text-anchor="middle" font-size="7.5" fill="#67e8f9" font-family="monospace">OBAT  2-8°C ✓</text>
+          <rect x="270" y="137" width="210" height="48" rx="4" fill="#03202e" opacity="0.97" class="item item13"/>
+          <rect x="270" y="137" width="210" height="7" rx="2" fill="#054060" opacity="0.8"/>
+          <text x="375" y="159" text-anchor="middle" dominant-baseline="central" font-size="20" font-family="Segoe UI Emoji,Apple Color Emoji,sans-serif">📦</text>
+          <text x="375" y="178" text-anchor="middle" font-size="8" fill="#a5f3fc" font-family="monospace">PALET BAHAN BAKU · 80%</text>
+          <text x="375" y="218" text-anchor="middle" font-size="7.5" fill="rgba(165,243,252,0.55)" font-family="monospace">ZONA BEKU (-20–0°C)</text>
+
+          <!-- ZONA KANAN -->
+          <rect x="510" y="0" width="240" height="16" rx="3" fill="rgba(129,140,248,0.08)"/>
+          <rect x="517" y="18" width="5" height="187" rx="2" fill="#2d4a6e"/>
+          <rect x="742" y="18" width="5" height="187" rx="2" fill="#2d4a6e"/>
+          <rect x="515" y="18" width="234" height="5" rx="2" fill="#4a7ab5"/>
+          <rect x="517" y="65" width="230" height="6" rx="2" fill="#3a5f8e"/>
+          <rect x="517" y="130" width="230" height="6" rx="2" fill="#3a5f8e"/>
+          <rect x="517" y="186" width="230" height="6" rx="2" fill="#3a5f8e"/>
+          <!-- items -->
+          <rect x="524" y="24" width="48" height="41" rx="4" fill="#162e4a" opacity="0.9" class="item item14"/>
+          <text x="548" y="44" text-anchor="middle" dominant-baseline="central" font-size="18" font-family="Segoe UI Emoji,Apple Color Emoji,sans-serif">📦</text>
+          <text x="548" y="62" text-anchor="middle" font-size="7" fill="#93c5fd" font-family="monospace">BOX-A</text>
+          <rect x="579" y="24" width="48" height="41" rx="4" fill="#162e4a" opacity="0.9" class="item item15"/>
+          <text x="603" y="44" text-anchor="middle" dominant-baseline="central" font-size="18" font-family="Segoe UI Emoji,Apple Color Emoji,sans-serif">📦</text>
+          <text x="603" y="62" text-anchor="middle" font-size="7" fill="#93c5fd" font-family="monospace">BOX-B</text>
+          <rect x="634" y="24" width="48" height="41" rx="4" fill="#162e4a" opacity="0.9" class="item item16"/>
+          <text x="658" y="44" text-anchor="middle" dominant-baseline="central" font-size="18" font-family="Segoe UI Emoji,Apple Color Emoji,sans-serif">📦</text>
+          <text x="658" y="62" text-anchor="middle" font-size="7" fill="#93c5fd" font-family="monospace">BOX-C</text>
+          <rect x="689" y="24" width="46" height="41" rx="4" fill="#162e4a" opacity="0.9" class="item item17"/>
+          <text x="712" y="44" text-anchor="middle" dominant-baseline="central" font-size="18" font-family="Segoe UI Emoji,Apple Color Emoji,sans-serif">📦</text>
+          <text x="712" y="62" text-anchor="middle" font-size="7" fill="#93c5fd" font-family="monospace">BOX-D</text>
+          <rect x="524" y="72" width="211" height="55" rx="4" fill="#0c2a40" opacity="0.95" class="item item18"/>
+          <rect x="524" y="72" width="211" height="7" rx="2" fill="#163d58" opacity="0.8"/>
+          <text x="630" y="97" text-anchor="middle" dominant-baseline="central" font-size="22" font-family="Segoe UI Emoji,Apple Color Emoji,sans-serif">🏭</text>
+          <text x="630" y="119" text-anchor="middle" font-size="8" fill="#93c5fd" font-family="monospace">PRODUK OLAHAN · Batch #24-0523</text>
+          <rect x="524" y="137" width="100" height="48" rx="4" fill="#0d2236" opacity="0.9" class="item item19"/>
+          <text x="574" y="158" text-anchor="middle" dominant-baseline="central" font-size="22" font-family="Segoe UI Emoji,Apple Color Emoji,sans-serif">🥚</text>
+          <text x="574" y="180" text-anchor="middle" font-size="7.5" fill="#a5f3fc" font-family="monospace">TELUR</text>
+          <rect x="632" y="137" width="100" height="48" rx="4" fill="#0d2236" opacity="0.9" class="item item20"/>
+          <text x="682" y="158" text-anchor="middle" dominant-baseline="central" font-size="22" font-family="Segoe UI Emoji,Apple Color Emoji,sans-serif">🧈</text>
+          <text x="682" y="180" text-anchor="middle" font-size="7.5" fill="#a5f3fc" font-family="monospace">MENTEGA</text>
+          <text x="630" y="218" text-anchor="middle" font-size="7.5" fill="rgba(165,243,252,0.55)" font-family="monospace">ZONA REGULER (0–10°C)</text>
+
+          <!-- AC vent -->
+          <g id="vent-group" opacity="0.7">
+            <rect x="340" y="2" width="80" height="12" rx="3" fill="#1e3a5f"/>
+            <text x="380" y="12" text-anchor="middle" font-size="7" fill="#67e8f9" font-family="monospace">VENT A/C</text>
+            <line x1="350" y1="14" x2="345" y2="28" stroke="#67e8f9" stroke-width="0.8" stroke-dasharray="2,2"/>
+            <line x1="365" y1="14" x2="363" y2="28" stroke="#67e8f9" stroke-width="0.8" stroke-dasharray="2,2"/>
+            <line x1="380" y1="14" x2="380" y2="28" stroke="#67e8f9" stroke-width="0.8" stroke-dasharray="2,2"/>
+            <line x1="395" y1="14" x2="397" y2="28" stroke="#67e8f9" stroke-width="0.8" stroke-dasharray="2,2"/>
+            <line x1="410" y1="14" x2="415" y2="28" stroke="#67e8f9" stroke-width="0.8" stroke-dasharray="2,2"/>
+          </g>
+        </svg>
+      </div>
+    </section>
+
+    <!-- LOG TABLE -->
+    <section class="log-section">
+      <div class="section-header">
+        <h2>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" width="20" height="20">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" stroke-width="1.5"/>
+          </svg>
+          Log Telemetri Terakhir
+        </h2>
+      </div>
+      <div class="log-table-wrap">
+        <table class="log-table">
+          <thead>
+            <tr><th>Waktu</th><th>Suhu (°C)</th><th>RH (%)</th><th>Daya (W)</th><th>Relay</th><th>Status</th></tr>
+          </thead>
+          <tbody id="log-tbody">
+            <tr><td colspan="6" style="text-align:center;opacity:0.4;">Menunggu data MQTT…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <footer class="dash-footer">
+      <span>IoT Cold Chain Monitor · Mata Kuliah IoT</span>
+      <span class="sep">|</span>
+      <span>HiveMQ Broker · Topic: coldchain/telemetry/dataset_sync</span>
+      <span class="sep">|</span>
+      <span id="data-count">0 paket diterima</span>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
