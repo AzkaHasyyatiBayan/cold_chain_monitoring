@@ -7,7 +7,7 @@ Proyek ini merupakan bagian dari **Tugas Akhir Mata Kuliah Internet of Things**.
 | Kategori | Detail |
 |----------|--------|
 | Suhu & Kelembaban | Menampilkan nilai **T1 (°C)** dan **RH_1 (%)** dari sensor DHT22 |
-| ⚡ Konsumsi Daya | Memonitor **Watt**, **Volt**, dan **Arus** yang disimulasikan oleh potensiometer |
+| Konsumsi Daya | Memonitor **Watt**, **Volt**, dan **Arus** yang disimulasikan oleh potensiometer |
 | Status Kompresor | ON / OFF berdasarkan suhu > 4°C, ditampilkan dengan toggle visual dan animasi kipas |
 | Notifikasi Bahaya | Banner merah berkedip jika suhu > 8°C **atau** daya > 300 W, disertai log "Kritis" |
 | Log Riwayat | 8 data terakhir dalam tabel (waktu, suhu, kelembaban, daya, relay, status) |
